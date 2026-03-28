@@ -9,7 +9,7 @@ if [ $# -ne 3 ]; then
 fi
 
 cd pi
-npm run build
+deno task build
 cd ..
 
 rm -rf "$1"

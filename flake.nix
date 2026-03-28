@@ -14,7 +14,7 @@
           buildInputs = with pkgs; [
             pkg-config
             openssl
-            nodejs
+            deno
           ];
         };
       });
