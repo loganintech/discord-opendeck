@@ -109,14 +109,11 @@ async fn setup_discord_client(
 
 // Internal logic that actually connects to Discord and performs OAuth if necessary.
 async fn create_discord_client(settings: &DiscordSettings) -> Result<DiscordIpcClient, String> {
-	if !settings.has_credentials() {
-		return Err(
-			"No Discord credentials available. Set DISCORD_CLIENT_ID and DISCORD_CLIENT_SECRET environment variables at build time, or enter them in the plugin settings."
-				.to_owned(),
-		);
+	if settings.client_id.is_empty() || settings.client_secret.is_empty() {
+		return Err("Client ID or Client Secret not configured".to_owned());
 	}
 
-	let (mut rpc, user) = DiscordIpcClient::create(settings.effective_client_id().to_owned())
+	let (mut rpc, user) = DiscordIpcClient::create(settings.client_id.clone())
 		.await
 		.map_err(|e| format!("Failed to connect to Discord: {}", e))?;
 	log::info!("Connected to Discord as {}", user.username);
@@ -128,8 +125,8 @@ async fn create_discord_client(settings: &DiscordSettings) -> Result<DiscordIpcC
 	} else {
 		log::info!("Starting OAuth authorization flow");
 
-		let client_id = settings.effective_client_id().to_owned();
-		let client_secret = settings.effective_client_secret().to_owned();
+		let client_id = settings.client_id.clone();
+		let client_secret = settings.client_secret.clone();
 
 		rpc.setup_event_handler(move |item| {
 			let code = match &item {
@@ -188,7 +185,7 @@ async fn create_discord_client(settings: &DiscordSettings) -> Result<DiscordIpcC
 		.await;
 
 		rpc.emit_command(&SentCommand::Authorize(AuthorizeArgs {
-			client_id: settings.effective_client_id().to_owned(),
+			client_id: settings.client_id.clone(),
 			scopes: vec!["rpc".to_owned(), "identify".to_owned()],
 			rpc_token: None,
 			username: None,

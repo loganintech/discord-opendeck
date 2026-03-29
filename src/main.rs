@@ -14,19 +14,6 @@ use openaction::{
 use serde::{Deserialize, Serialize};
 use tokio::sync::RwLock;
 
-// Built-in Discord application credentials for zero-configuration setup.
-// Set at build time: DISCORD_CLIENT_ID=... DISCORD_CLIENT_SECRET=... cargo build
-// When set, users only need to approve the OAuth dialog in Discord — no manual setup.
-const DEFAULT_CLIENT_ID: &str = match option_env!("DISCORD_CLIENT_ID") {
-	Some(v) => v,
-	None => "",
-};
-
-const DEFAULT_CLIENT_SECRET: &str = match option_env!("DISCORD_CLIENT_SECRET") {
-	Some(v) => v,
-	None => "",
-};
-
 // Represents the persisted Discord configuration the Stream Deck host sends us.
 #[derive(Serialize, Deserialize, Clone, Default)]
 #[serde(default)]
@@ -38,31 +25,6 @@ pub struct DiscordSettings {
 	#[serde(rename = "accessToken")]
 	pub access_token: String,
 	pub error: Option<String>,
-}
-
-impl DiscordSettings {
-	/// Returns the effective client ID (user override or built-in default).
-	pub fn effective_client_id(&self) -> &str {
-		if self.client_id.is_empty() {
-			DEFAULT_CLIENT_ID
-		} else {
-			&self.client_id
-		}
-	}
-
-	/// Returns the effective client secret (user override or built-in default).
-	pub fn effective_client_secret(&self) -> &str {
-		if self.client_secret.is_empty() {
-			DEFAULT_CLIENT_SECRET
-		} else {
-			&self.client_secret
-		}
-	}
-
-	/// Whether usable credentials are available (either user-provided or built-in).
-	pub fn has_credentials(&self) -> bool {
-		!self.effective_client_id().is_empty() && !self.effective_client_secret().is_empty()
-	}
 }
 
 // Global storage for the last-applied settings so every module can read/write them.
@@ -91,6 +53,8 @@ impl global_events::GlobalEventHandler for GlobalEventHandler {
 		let settings_changed = current.client_id != settings.client_id
 			|| current.client_secret != settings.client_secret
 			|| current.access_token != settings.access_token
+			|| current.client_id.is_empty()
+			|| current.client_secret.is_empty()
 			|| current.access_token.is_empty();
 		drop(current);
 
